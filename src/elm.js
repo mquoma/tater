@@ -8340,7 +8340,7 @@ var _user$project$Main$updateTime = F2(
 	});
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
-	_0: {message: 'test', inputText: '', selectedTime: _elm_lang$core$Maybe$Nothing, currentTime: 0.0, setTime: _elm_lang$core$Maybe$Nothing, annotations: _elm_lang$core$Maybe$Nothing, isVisible: false},
+	_0: {message: 'test', inputText: '', selectedTime: _elm_lang$core$Maybe$Nothing, currentTime: 0.0, setTime: _elm_lang$core$Maybe$Nothing, annotations: _elm_lang$core$Maybe$Nothing, isAnnotationVisible: false},
 	_1: _elm_lang$core$Platform_Cmd$none
 };
 var _user$project$Main$setTime = _elm_lang$core$Native_Platform.outgoingPort(
@@ -8355,11 +8355,11 @@ var _user$project$Main$consoleLog = _elm_lang$core$Native_Platform.outgoingPort(
 	});
 var _user$project$Main$Model = F7(
 	function (a, b, c, d, e, f, g) {
-		return {message: a, inputText: b, selectedTime: c, currentTime: d, setTime: e, annotations: f, isVisible: g};
+		return {message: a, inputText: b, selectedTime: c, currentTime: d, setTime: e, annotations: f, isAnnotationVisible: g};
 	});
-var _user$project$Main$Annotation = F4(
-	function (a, b, c, d) {
-		return {timeStamp: a, text: b, comments: c, highlighted: d};
+var _user$project$Main$Annotation = F5(
+	function (a, b, c, d, e) {
+		return {timeStamp: a, text: b, comments: c, highlighted: d, isCommentVisible: e};
 	});
 var _user$project$Main$update = F2(
 	function (msg, model) {
@@ -8382,6 +8382,30 @@ var _user$project$Main$update = F2(
 						}),
 					_1: _user$project$Main$setTime(_p2)
 				};
+			case 'AddComment':
+				var newAnnotations = A2(
+					_elm_lang$core$List$map,
+					function (a) {
+						return _elm_lang$core$Native_Utils.eq(a.timeStamp, _p1._0.timeStamp) ? _elm_lang$core$Native_Utils.update(
+							a,
+							{isCommentVisible: true}) : _elm_lang$core$Native_Utils.update(
+							a,
+							{isCommentVisible: false});
+					},
+					A2(
+						_elm_lang$core$Maybe$withDefault,
+						{ctor: '[]'},
+						model.annotations));
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							annotations: _elm_lang$core$Maybe$Just(newAnnotations),
+							selectedTime: _elm_lang$core$Maybe$Just(model.currentTime)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
 			case 'AddAnnotation':
 				return {
 					ctor: '_Tuple2',
@@ -8389,7 +8413,7 @@ var _user$project$Main$update = F2(
 						model,
 						{
 							selectedTime: _elm_lang$core$Maybe$Just(model.currentTime),
-							isVisible: true
+							isAnnotationVisible: true
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -8397,7 +8421,7 @@ var _user$project$Main$update = F2(
 				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
 			case 'SaveAnnotation':
 				var selectedTime = A2(_elm_lang$core$Maybe$withDefault, 0, model.selectedTime);
-				var newAnnotation = A4(_user$project$Main$Annotation, selectedTime, model.inputText, _elm_lang$core$Maybe$Nothing, false);
+				var newAnnotation = A5(_user$project$Main$Annotation, selectedTime, model.inputText, _elm_lang$core$Maybe$Nothing, false, false);
 				var newAnnotations = function () {
 					var _p3 = model.annotations;
 					if (_p3.ctor === 'Nothing') {
@@ -8432,7 +8456,7 @@ var _user$project$Main$update = F2(
 							annotations: _elm_lang$core$Maybe$Just(newAnnotations),
 							selectedTime: _elm_lang$core$Maybe$Nothing,
 							inputText: '',
-							isVisible: false
+							isAnnotationVisible: false
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -8522,6 +8546,9 @@ var _user$project$Main$renderCommentInput = function (isVisible) {
 			{ctor: '[]'},
 			{ctor: '[]'});
 	}
+};
+var _user$project$Main$AddComment = function (a) {
+	return {ctor: 'AddComment', _0: a};
 };
 var _user$project$Main$SaveAnnotation = {ctor: 'SaveAnnotation'};
 var _user$project$Main$UpdateAnnotation = function (a) {
@@ -8658,13 +8685,22 @@ var _user$project$Main$renderAnnotations = function (annotations) {
 											ctor: '::',
 											_0: A2(
 												_elm_lang$html$Html$a,
-												{ctor: '[]'},
+												{
+													ctor: '::',
+													_0: _elm_lang$html$Html_Events$onClick(
+														_user$project$Main$AddComment(annotation)),
+													_1: {ctor: '[]'}
+												},
 												{
 													ctor: '::',
 													_0: _elm_lang$html$Html$text('add comment'),
 													_1: {ctor: '[]'}
 												}),
-											_1: {ctor: '[]'}
+											_1: {
+												ctor: '::',
+												_0: _user$project$Main$renderCommentInput(annotation.isCommentVisible),
+												_1: {ctor: '[]'}
+											}
 										}
 									}
 								}
@@ -8736,7 +8772,7 @@ var _user$project$Main$view = function (model) {
 				_0: _user$project$Main$renderAnnotations(model.annotations),
 				_1: {
 					ctor: '::',
-					_0: _user$project$Main$renderAnnotationInput(model.isVisible),
+					_0: _user$project$Main$renderAnnotationInput(model.isAnnotationVisible),
 					_1: {ctor: '[]'}
 				}
 			}

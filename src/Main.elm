@@ -23,7 +23,7 @@ type alias Model =
     , currentTime : Float
     , setTime : Maybe Float
     , annotations : Maybe (List Annotation)
-    , isVisible : Bool
+    , isAnnotationVisible : Bool
     }
 
 
@@ -32,6 +32,7 @@ type alias Annotation =
     , text : String
     , comments : Maybe (List Comment)
     , highlighted : Bool
+    , isCommentVisible : Bool
     }
 
 
@@ -50,7 +51,7 @@ init =
       , currentTime = 0.0
       , setTime = Nothing
       , annotations = Nothing
-      , isVisible = False
+      , isAnnotationVisible = False
       }
     , Cmd.none
     )
@@ -67,6 +68,7 @@ type Msg
     | AddAnnotation
     | UpdateAnnotation String
     | SaveAnnotation
+    | AddComment Annotation
     | UpdateComment String
     | SaveComment
 
@@ -80,10 +82,30 @@ update msg model =
         SetTime f ->
             ( { model | setTime = Just f }, setTime f )
 
+        AddComment annotation ->
+            let
+                newAnnotations =
+                    model.annotations
+                        |> Maybe.withDefault []
+                        |> List.map
+                            (\a ->
+                                if a.timeStamp == annotation.timeStamp then
+                                    { a | isCommentVisible = True }
+                                else
+                                    { a | isCommentVisible = False }
+                            )
+            in
+                ( { model
+                    | annotations = Just newAnnotations
+                    , selectedTime = Just model.currentTime
+                  }
+                , Cmd.none
+                )
+
         AddAnnotation ->
             ( { model
                 | selectedTime = Just model.currentTime
-                , isVisible = True
+                , isAnnotationVisible = True
               }
             , Cmd.none
             )
@@ -101,7 +123,7 @@ update msg model =
                         |> Maybe.withDefault 0
 
                 newAnnotation =
-                    Annotation selectedTime model.inputText Nothing False
+                    Annotation selectedTime model.inputText Nothing False False
 
                 newAnnotations =
                     case model.annotations of
@@ -115,10 +137,39 @@ update msg model =
                     | annotations = Just newAnnotations
                     , selectedTime = Nothing
                     , inputText = ""
-                    , isVisible = False
+                    , isAnnotationVisible = False
                   }
                 , Cmd.none
                 )
+
+                SaveComment ->
+                    let
+                        currentTime =
+                            model.currentTime
+
+                        selectedTime =
+                            model.selectedTime
+                                |> Maybe.withDefault 0
+
+                        newComment =
+                            Comment 0 selectedTime model.inputText 
+
+                        newAnnotations =
+                            case model.annotations of
+                                Nothing ->
+                                    [ newAnnotation ]
+
+                                Just a ->
+                                    List.concat [ a, [ newAnnotation ] ]
+                    in
+                        ( { model
+                            | annotations = Just newAnnotations
+                            , selectedTime = Nothing
+                            , inputText = ""
+                            , isAnnotationVisible = False
+                          }
+                        , Cmd.none
+                        )
 
         UpdateAnnotation input ->
             ( { model | inputText = input }, Cmd.none )
@@ -181,7 +232,7 @@ view model =
                 []
             ]
         , renderAnnotations model.annotations
-        , renderAnnotationInput model.isVisible
+        , renderAnnotationInput model.isAnnotationVisible
         ]
 
 
@@ -238,7 +289,8 @@ renderAnnotations annotations =
                         , span [] [ text annotation.text ]
                         , span [] [ text " - author" ]
                         , renderAnnotationComments annotation
-                        , a [] [ text "add comment" ]
+                        , a [ onClick (AddComment annotation) ] [ text "add comment" ]
+                        , renderCommentInput annotation.isCommentVisible
                         ]
                             |> li []
                     )

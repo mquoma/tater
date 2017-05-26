@@ -8234,6 +8234,37 @@ var _elm_lang$html$Html_Events$Options = F2(
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
+var _user$project$Main$renderAnnotationComments = function (annotation) {
+	var _p0 = annotation.comments;
+	if (_p0.ctor === 'Nothing') {
+		return A2(
+			_elm_lang$html$Html$div,
+			{ctor: '[]'},
+			{ctor: '[]'});
+	} else {
+		return A2(
+			_elm_lang$html$Html$ul,
+			{ctor: '[]'},
+			A2(
+				_elm_lang$core$List$map,
+				function (c) {
+					return A2(
+						_elm_lang$html$Html$li,
+						{ctor: '[]'},
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html$text(c.text),
+							_1: {ctor: '[]'}
+						});
+				},
+				A2(
+					_elm_lang$core$List$sortBy,
+					function (_) {
+						return _.dateTimeStamp;
+					},
+					_p0._0)));
+	}
+};
 var _user$project$Main$targetCurrentTime = A2(
 	_elm_lang$core$Json_Decode$at,
 	{
@@ -8280,7 +8311,7 @@ var _user$project$Main$updateTime = F2(
 	});
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
-	_0: {message: 'test', inputText: '', selectedTime: _elm_lang$core$Maybe$Nothing, currentTime: 0.0, setTime: _elm_lang$core$Maybe$Nothing, annotations: _elm_lang$core$Maybe$Nothing, isVisible: false},
+	_0: {message: 'test', inputText: '', selectedTime: _elm_lang$core$Maybe$Nothing, currentTime: 0.0, setTime: _elm_lang$core$Maybe$Nothing, annotations: _elm_lang$core$Maybe$Nothing, isAnnotationVisible: false},
 	_1: _elm_lang$core$Platform_Cmd$none
 };
 var _user$project$Main$setTime = _elm_lang$core$Native_Platform.outgoingPort(
@@ -8295,32 +8326,56 @@ var _user$project$Main$consoleLog = _elm_lang$core$Native_Platform.outgoingPort(
 	});
 var _user$project$Main$Model = F7(
 	function (a, b, c, d, e, f, g) {
-		return {message: a, inputText: b, selectedTime: c, currentTime: d, setTime: e, annotations: f, isVisible: g};
+		return {message: a, inputText: b, selectedTime: c, currentTime: d, setTime: e, annotations: f, isAnnotationVisible: g};
 	});
-var _user$project$Main$Annotation = F4(
-	function (a, b, c, d) {
-		return {timeStamp: a, text: b, comments: c, highlighted: d};
+var _user$project$Main$Annotation = F5(
+	function (a, b, c, d, e) {
+		return {timeStamp: a, text: b, comments: c, highlighted: d, isCommentVisible: e};
 	});
 var _user$project$Main$update = F2(
 	function (msg, model) {
-		var _p0 = msg;
-		switch (_p0.ctor) {
+		var _p1 = msg;
+		switch (_p1.ctor) {
 			case 'UpdateTime':
 				return {
 					ctor: '_Tuple2',
-					_0: A2(_user$project$Main$updateTime, model, _p0._0),
+					_0: A2(_user$project$Main$updateTime, model, _p1._0),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'SetTime':
-				var _p1 = _p0._0;
+				var _p2 = _p1._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							setTime: _elm_lang$core$Maybe$Just(_p1)
+							setTime: _elm_lang$core$Maybe$Just(_p2)
 						}),
-					_1: _user$project$Main$setTime(_p1)
+					_1: _user$project$Main$setTime(_p2)
+				};
+			case 'AddComment':
+				var newAnnotations = A2(
+					_elm_lang$core$List$map,
+					function (a) {
+						return _elm_lang$core$Native_Utils.eq(a.timeStamp, _p1._0.timeStamp) ? _elm_lang$core$Native_Utils.update(
+							a,
+							{isCommentVisible: true}) : _elm_lang$core$Native_Utils.update(
+							a,
+							{isCommentVisible: false});
+					},
+					A2(
+						_elm_lang$core$Maybe$withDefault,
+						{ctor: '[]'},
+						model.annotations));
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							annotations: _elm_lang$core$Maybe$Just(newAnnotations),
+							selectedTime: _elm_lang$core$Maybe$Just(model.currentTime)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'AddAnnotation':
 				return {
@@ -8329,16 +8384,18 @@ var _user$project$Main$update = F2(
 						model,
 						{
 							selectedTime: _elm_lang$core$Maybe$Just(model.currentTime),
-							isVisible: true
+							isAnnotationVisible: true
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
+			case 'SaveComment':
+				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
 			case 'SaveAnnotation':
 				var selectedTime = A2(_elm_lang$core$Maybe$withDefault, 0, model.selectedTime);
-				var newAnnotation = A4(_user$project$Main$Annotation, selectedTime, model.inputText, _elm_lang$core$Maybe$Nothing, false);
+				var newAnnotation = A5(_user$project$Main$Annotation, selectedTime, model.inputText, _elm_lang$core$Maybe$Nothing, false, false);
 				var newAnnotations = function () {
-					var _p2 = model.annotations;
-					if (_p2.ctor === 'Nothing') {
+					var _p3 = model.annotations;
+					if (_p3.ctor === 'Nothing') {
 						return {
 							ctor: '::',
 							_0: newAnnotation,
@@ -8348,7 +8405,7 @@ var _user$project$Main$update = F2(
 						return _elm_lang$core$List$concat(
 							{
 								ctor: '::',
-								_0: _p2._0,
+								_0: _p3._0,
 								_1: {
 									ctor: '::',
 									_0: {
@@ -8370,7 +8427,7 @@ var _user$project$Main$update = F2(
 							annotations: _elm_lang$core$Maybe$Just(newAnnotations),
 							selectedTime: _elm_lang$core$Maybe$Nothing,
 							inputText: '',
-							isVisible: false
+							isAnnotationVisible: false
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -8379,7 +8436,15 @@ var _user$project$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{inputText: _p0._0}),
+						{inputText: _p1._0}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'UpdateComment':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{inputText: _p1._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			default:
@@ -8390,13 +8455,79 @@ var _user$project$Main$Comment = F3(
 	function (a, b, c) {
 		return {authorId: a, dateTimeStamp: b, text: c};
 	});
+var _user$project$Main$SaveComment = {ctor: 'SaveComment'};
+var _user$project$Main$UpdateComment = function (a) {
+	return {ctor: 'UpdateComment', _0: a};
+};
+var _user$project$Main$renderCommentInput = function (isVisible) {
+	var _p4 = isVisible;
+	if (_p4 === true) {
+		return A2(
+			_elm_lang$html$Html$div,
+			{ctor: '[]'},
+			{
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$label,
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html_Attributes$for('newComment '),
+						_1: {ctor: '[]'}
+					},
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html$text('New Comment: '),
+						_1: {ctor: '[]'}
+					}),
+				_1: {
+					ctor: '::',
+					_0: A2(
+						_elm_lang$html$Html$input,
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html_Attributes$id('newComment '),
+							_1: {
+								ctor: '::',
+								_0: _elm_lang$html$Html_Events$onInput(_user$project$Main$UpdateComment),
+								_1: {ctor: '[]'}
+							}
+						},
+						{ctor: '[]'}),
+					_1: {
+						ctor: '::',
+						_0: A2(
+							_elm_lang$html$Html$button,
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$SaveComment),
+								_1: {ctor: '[]'}
+							},
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html$text('save'),
+								_1: {ctor: '[]'}
+							}),
+						_1: {ctor: '[]'}
+					}
+				}
+			});
+	} else {
+		return A2(
+			_elm_lang$html$Html$div,
+			{ctor: '[]'},
+			{ctor: '[]'});
+	}
+};
+var _user$project$Main$AddComment = function (a) {
+	return {ctor: 'AddComment', _0: a};
+};
 var _user$project$Main$SaveAnnotation = {ctor: 'SaveAnnotation'};
 var _user$project$Main$UpdateAnnotation = function (a) {
 	return {ctor: 'UpdateAnnotation', _0: a};
 };
 var _user$project$Main$renderAnnotationInput = function (isVisible) {
-	var _p3 = isVisible;
-	if (_p3 === true) {
+	var _p5 = isVisible;
+	if (_p5 === true) {
 		return A2(
 			_elm_lang$html$Html$div,
 			{ctor: '[]'},
@@ -8457,8 +8588,8 @@ var _user$project$Main$AddAnnotation = {ctor: 'AddAnnotation'};
 var _user$project$Main$SetTime = function (a) {
 	return {ctor: 'SetTime', _0: a};
 };
-var _user$project$Main$annotationLink = function (n) {
-	var highlighted = n.highlighted ? 'annotation-highlighted' : 'annotation';
+var _user$project$Main$annotationLink = function (annotation) {
+	var highlighted = annotation.highlighted ? 'annotation-highlighted' : 'annotation';
 	return A2(
 		_elm_lang$html$Html$a,
 		{
@@ -8467,20 +8598,20 @@ var _user$project$Main$annotationLink = function (n) {
 			_1: {
 				ctor: '::',
 				_0: _elm_lang$html$Html_Events$onClick(
-					_user$project$Main$SetTime(n.timeStamp)),
+					_user$project$Main$SetTime(annotation.timeStamp)),
 				_1: {ctor: '[]'}
 			}
 		},
 		{
 			ctor: '::',
 			_0: _elm_lang$html$Html$text(
-				_elm_lang$core$Basics$toString(n.timeStamp)),
+				_elm_lang$core$Basics$toString(annotation.timeStamp)),
 			_1: {ctor: '[]'}
 		});
 };
-var _user$project$Main$renderAnnotations = function (a) {
-	var _p4 = a;
-	if (_p4.ctor === 'Nothing') {
+var _user$project$Main$renderAnnotations = function (annotations) {
+	var _p6 = annotations;
+	if (_p6.ctor === 'Nothing') {
 		return A2(
 			_elm_lang$html$Html$div,
 			{ctor: '[]'},
@@ -8491,14 +8622,60 @@ var _user$project$Main$renderAnnotations = function (a) {
 			{ctor: '[]'},
 			A2(
 				_elm_lang$core$List$map,
-				function (a) {
+				function (annotation) {
 					return A2(
 						_elm_lang$html$Html$li,
 						{ctor: '[]'},
 						{
 							ctor: '::',
-							_0: _user$project$Main$annotationLink(a),
-							_1: {ctor: '[]'}
+							_0: _user$project$Main$annotationLink(annotation),
+							_1: {
+								ctor: '::',
+								_0: A2(
+									_elm_lang$html$Html$span,
+									{ctor: '[]'},
+									{
+										ctor: '::',
+										_0: _elm_lang$html$Html$text(annotation.text),
+										_1: {ctor: '[]'}
+									}),
+								_1: {
+									ctor: '::',
+									_0: A2(
+										_elm_lang$html$Html$span,
+										{ctor: '[]'},
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html$text(' - author'),
+											_1: {ctor: '[]'}
+										}),
+									_1: {
+										ctor: '::',
+										_0: _user$project$Main$renderAnnotationComments(annotation),
+										_1: {
+											ctor: '::',
+											_0: A2(
+												_elm_lang$html$Html$a,
+												{
+													ctor: '::',
+													_0: _elm_lang$html$Html_Events$onClick(
+														_user$project$Main$AddComment(annotation)),
+													_1: {ctor: '[]'}
+												},
+												{
+													ctor: '::',
+													_0: _elm_lang$html$Html$text('add comment'),
+													_1: {ctor: '[]'}
+												}),
+											_1: {
+												ctor: '::',
+												_0: _user$project$Main$renderCommentInput(annotation.isCommentVisible),
+												_1: {ctor: '[]'}
+											}
+										}
+									}
+								}
+							}
 						});
 				},
 				A2(
@@ -8506,7 +8683,7 @@ var _user$project$Main$renderAnnotations = function (a) {
 					function (_) {
 						return _.timeStamp;
 					},
-					_p4._0)));
+					_p6._0)));
 	}
 };
 var _user$project$Main$UpdateTime = function (a) {
@@ -8566,7 +8743,7 @@ var _user$project$Main$view = function (model) {
 				_0: _user$project$Main$renderAnnotations(model.annotations),
 				_1: {
 					ctor: '::',
-					_0: _user$project$Main$renderAnnotationInput(model.isVisible),
+					_0: _user$project$Main$renderAnnotationInput(model.isAnnotationVisible),
 					_1: {ctor: '[]'}
 				}
 			}
@@ -8577,7 +8754,7 @@ var _user$project$Main$main = _elm_lang$html$Html$program(
 		view: _user$project$Main$view,
 		init: _user$project$Main$init,
 		update: _user$project$Main$update,
-		subscriptions: function (_p5) {
+		subscriptions: function (_p7) {
 			return _elm_lang$core$Platform_Sub$none;
 		}
 	})();
