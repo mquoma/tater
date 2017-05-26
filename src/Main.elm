@@ -4,6 +4,7 @@ import Html exposing (Html, input, span, label, text, div, img, video, source, l
 import Html.Attributes exposing (src, for, id, width, height, controls, src, type_, class)
 import Html.Events exposing (on, onClick, onInput)
 import Json.Decode as JD
+import Time exposing (Time, second)
 
 
 port setTime : Float -> Cmd msg
@@ -21,9 +22,9 @@ type alias Model =
     , inputText : String
     , selectedTime : Maybe Float
     , currentTime : Float
-    , setTime : Maybe Float
     , annotations : Maybe (List Annotation)
     , isAnnotationVisible : Bool
+    , currentDateTime : Time
     }
 
 
@@ -31,7 +32,7 @@ type alias Annotation =
     { timeStamp : Float
     , text : String
     , comments : Maybe (List Comment)
-    , highlighted : Bool
+    , isHighlighted : Bool
     , isCommentVisible : Bool
     }
 
@@ -49,9 +50,9 @@ init =
       , inputText = ""
       , selectedTime = Nothing
       , currentTime = 0.0
-      , setTime = Nothing
       , annotations = Nothing
       , isAnnotationVisible = False
+      , currentDateTime = 0
       }
     , Cmd.none
     )
@@ -71,6 +72,7 @@ type Msg
     | AddComment Annotation
     | UpdateComment String
     | SaveComment
+    | Tick Time
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -80,7 +82,7 @@ update msg model =
             ( updateTime model f, Cmd.none )
 
         SetTime f ->
-            ( { model | setTime = Just f }, setTime f )
+            ( model, setTime f )
 
         AddComment annotation ->
             let
@@ -109,9 +111,6 @@ update msg model =
               }
             , Cmd.none
             )
-
-        SaveComment ->
-            ( model, Cmd.none )
 
         SaveAnnotation ->
             let
@@ -142,40 +141,49 @@ update msg model =
                 , Cmd.none
                 )
 
-                SaveComment ->
-                    let
-                        currentTime =
-                            model.currentTime
+        SaveComment ->
+            let
+                currentTime =
+                    model.currentTime
 
-                        selectedTime =
-                            model.selectedTime
-                                |> Maybe.withDefault 0
+                selectedTime =
+                    model.selectedTime
+                        |> Maybe.withDefault 0
 
-                        newComment =
-                            Comment 0 selectedTime model.inputText 
+                newComment =
+                    Comment "0" (toString model.currentDateTime) model.inputText
 
-                        newAnnotations =
-                            case model.annotations of
-                                Nothing ->
-                                    [ newAnnotation ]
-
-                                Just a ->
-                                    List.concat [ a, [ newAnnotation ] ]
-                    in
-                        ( { model
-                            | annotations = Just newAnnotations
-                            , selectedTime = Nothing
-                            , inputText = ""
-                            , isAnnotationVisible = False
-                          }
-                        , Cmd.none
-                        )
+                newAnnotations =
+                    model.annotations
+                        |> Maybe.withDefault []
+                        |> List.map
+                            (\a ->
+                                if a.isCommentVisible == True then
+                                    { a
+                                        | isCommentVisible = False
+                                        , comments = Just (newComment :: Maybe.withDefault [] a.comments)
+                                    }
+                                else
+                                    a
+                            )
+            in
+                ( { model
+                    | annotations = Just (Debug.log "this" newAnnotations)
+                    , selectedTime = Nothing
+                    , inputText = ""
+                    , isAnnotationVisible = False
+                  }
+                , Cmd.none
+                )
 
         UpdateAnnotation input ->
             ( { model | inputText = input }, Cmd.none )
 
         UpdateComment input ->
             ( { model | inputText = input }, Cmd.none )
+
+        Tick time ->
+            ( { model | currentDateTime = time }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -195,9 +203,9 @@ updateTime model f =
 setHighLight : Annotation -> Float -> Annotation
 setHighLight a f =
     if f >= a.timeStamp then
-        { a | highlighted = True }
+        { a | isHighlighted = True }
     else
-        { a | highlighted = False }
+        { a | isHighlighted = False }
 
 
 onTimeUpdate : (Float -> a) -> Html.Attribute a
@@ -217,7 +225,8 @@ targetCurrentTime =
 view : Model -> Html Msg
 view model =
     div []
-        [ video
+        [ --div [] [ text (toString model) ]
+          video
             [ id "video"
             , width 460
             , height 130
@@ -306,7 +315,13 @@ renderAnnotationComments annotation =
         Just list ->
             list
                 |> List.sortBy .dateTimeStamp
-                |> List.map (\c -> li [] [ text c.text ])
+                |> List.map
+                    (\c ->
+                        li []
+                            [ span [] [ text c.text ]
+                            , span [] [ text c.authorId ]
+                            ]
+                    )
                 |> ul []
 
 
@@ -314,7 +329,7 @@ annotationLink : Annotation -> Html Msg
 annotationLink annotation =
     let
         highlighted =
-            if annotation.highlighted then
+            if annotation.isHighlighted then
                 "annotation-highlighted"
             else
                 "annotation"
@@ -336,10 +351,10 @@ main =
         { view = view
         , init = init
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Time.every second Tick
