@@ -146,10 +146,6 @@ update msg model =
                 currentTime =
                     model.currentTime
 
-                selectedTime =
-                    model.selectedTime
-                        |> Maybe.withDefault 0
-
                 newComment =
                     Comment "0" (toString model.currentDateTime) model.inputText
 
@@ -168,7 +164,7 @@ update msg model =
                             )
             in
                 ( { model
-                    | annotations = Just (Debug.log "this" newAnnotations)
+                    | annotations = Just newAnnotations
                     , selectedTime = Nothing
                     , inputText = ""
                     , isAnnotationVisible = False
